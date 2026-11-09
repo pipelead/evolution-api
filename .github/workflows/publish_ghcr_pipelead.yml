@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - pipelead/2.3.7-fix-fromme-media-webhook
+      - pipelead/2.3.7-baileys-rc13
 
 jobs:
   build:
@@ -19,10 +20,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - id: tag
+        run: |
+          if [ "${{ github.ref_name }}" = "pipelead/2.3.7-baileys-rc13" ]; then
+            echo "name=2.3.7-pipelead-rc13" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=2.3.7-pipelead" >> "$GITHUB_OUTPUT"
+          fi
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/evolution-api:2.3.7-pipelead
-            ghcr.io/${{ github.repository_owner }}/evolution-api:2.3.7-pipelead-${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/evolution-api:${{ steps.tag.outputs.name }}
+            ghcr.io/${{ github.repository_owner }}/evolution-api:${{ steps.tag.outputs.name }}-${{ github.sha }}
