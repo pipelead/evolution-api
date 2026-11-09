@@ -1387,27 +1387,21 @@ export class BaileysStartupService extends ChannelStartupService {
             if (isMedia) {
               if (this.configService.get<S3>('S3').ENABLE) {
                 try {
-                  if (isVideo && !this.configService.get<S3>('S3').SAVE_VIDEO) {
-                    this.logger.warn('Video upload is disabled. Skipping video upload.');
-                    // Skip video upload by returning early from this block
-                    return;
-                  }
-
                   const message: any = received;
 
                   // Verificação adicional para garantir que há conteúdo de mídia real
                   const hasRealMedia = this.hasValidMediaContent(message);
 
-                  if (!hasRealMedia) {
+                  if (isVideo && !this.configService.get<S3>('S3').SAVE_VIDEO) {
+                    this.logger.warn('Video upload is disabled. Skipping video upload.');
+                  } else if (!hasRealMedia) {
                     this.logger.warn('Message detected as media but contains no valid media content');
                   } else {
                     const media = await this.getBase64FromMediaMessage({ message }, true);
 
                     if (!media) {
                       this.logger.verbose('No valid media to upload (messageContextInfo only), skipping MinIO');
-                      return;
-                    }
-
+                    } else {
                     const { buffer, mediaType, fileName, size } = media;
                     const mimetype = mimeTypes.lookup(fileName).toString();
                     const fullName = join(
@@ -1433,6 +1427,7 @@ export class BaileysStartupService extends ChannelStartupService {
                     messageRaw.message.mediaUrl = mediaUrl;
 
                     await this.prismaRepository.message.update({ where: { id: msg.id }, data: messageRaw });
+                    }
                   }
                 } catch (error) {
                   this.logger.error(['Error on upload file to minio', error?.message, error?.stack]);
@@ -2476,9 +2471,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
               if (!media) {
                 this.logger.verbose('No valid media to upload (messageContextInfo only), skipping MinIO');
-                return;
-              }
-
+              } else {
               const { buffer, mediaType, fileName, size } = media;
 
               const mimetype = mimeTypes.lookup(fileName).toString();
@@ -2502,6 +2495,7 @@ export class BaileysStartupService extends ChannelStartupService {
               messageRaw.message.mediaUrl = mediaUrl;
 
               await this.prismaRepository.message.update({ where: { id: msg.id }, data: messageRaw });
+              }
             }
           } catch (error) {
             this.logger.error(['Error on upload file to minio', error?.message, error?.stack]);
@@ -3851,7 +3845,10 @@ export class BaileysStartupService extends ChannelStartupService {
         }
       }
 
-      if ('messageContextInfo' in msg.message && Object.keys(msg.message).length === 1) {
+      if (
+        Object.keys(msg.message).length === 1 &&
+        Object.prototype.hasOwnProperty.call(msg.message, 'messageContextInfo')
+      ) {
         this.logger.verbose('Message contains only messageContextInfo, skipping media processing');
         return null;
       }
