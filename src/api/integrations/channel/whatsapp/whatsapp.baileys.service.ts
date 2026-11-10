@@ -2041,7 +2041,7 @@ export class BaileysStartupService extends ChannelStartupService {
     const jid = createJid(number);
 
     try {
-      const profilePictureUrl = await this.client.profilePictureUrl(jid, 'image');
+      const profilePictureUrl = await this.client.profilePictureUrl(jid, 'image', 5000);
 
       return { wuid: jid, profilePictureUrl };
     } catch {
